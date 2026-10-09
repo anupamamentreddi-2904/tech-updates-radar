@@ -1,7 +1,7 @@
 // Offline support: app shell cache-first, update feed network-first (falls back to the last saved copy).
 // Background check (Android, installed app): Periodic Background Sync fetches the feed about once a day and
 // shows a notification when a newer batch of updates exists than this device has already seen.
-const VERSION = "radar-v3";
+const VERSION = "radar-v4";
 const META = "radar-meta";              // what this device has seen; kept across versions
 const META_KEY = "/__meta/latest";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/apple-touch-icon.png"];

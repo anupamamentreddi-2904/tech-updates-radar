@@ -457,11 +457,27 @@ async function enableNotifications() {
     if ("periodicSync" in reg) {
       await reg.periodicSync.register("check-updates", { minInterval: 12 * 60 * 60 * 1000 });
       toast("Done! You'll get a notification when new updates arrive.");
+      setTimeout(testNotification, 1500);
     } else {
       toast("Notifications on. This phone only checks when you open the app.");
     }
   } catch { toast("Notifications on. Install the app to get them in the background."); }
   openBell();
+}
+async function testNotification() {
+  // Shows exactly what the daily alert looks like, using the newest real updates.
+  const fresh = S.all.filter(u => u.sent_sort === S.latest);
+  const high = fresh.filter(u => u.relevance === "High").length;
+  const top = [...fresh].sort((a, b) => (RANK[a.relevance] ?? 3) - (RANK[b.relevance] ?? 3)).slice(0, 3);
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    await reg.showNotification(`${fresh.length} new tech updates${high ? ` · ${high} high impact` : ""}`, {
+      body: top.map(u => `• ${u.product}: ${u.title}`).join("\n"),
+      icon: "icons/icon-192.png", badge: "icons/icon-192.png", tag: "tech-updates-test",
+      data: { url: location.href.split("#")[0] }
+    });
+    toast("Test notification sent - check your notifications");
+  } catch { toast("Couldn't show a notification here. Install the app and try again."); }
 }
 function openBell() {
   const items = unread();
@@ -476,7 +492,7 @@ function openBell() {
         <span><b>${esc(u.title)}</b><small>${esc(u.product)} · ${esc(u.relevance)} impact · ${esc(u.status)}</small></span>
       </button>`).join("") || `<div class="empty">New updates appear here after the daily 09:00 IST scan.</div>`}</div>
     <div class="notif-setting">${
-      st === "granted" ? "<span>🔔 Phone notifications are on for this device.</span>"
+      st === "granted" ? `<span>🔔 Phone notifications are on for this device.</span><button class="pill-btn" type="button" id="testNotif">Send a test notification</button>`
       : st === "denied" ? "<span>Notifications are blocked. Turn them on in your phone's settings for this app.</span>"
       : st === "unsupported" ? "<span>Install the app to get notifications on this phone.</span>"
       : `<span>Get a phone notification when new updates arrive.</span><button class="pill-btn primary" type="button" id="enableNotif">Turn on notifications</button>`}</div>`;
@@ -485,6 +501,7 @@ function openBell() {
   $("closeSheet").onclick = closeSheet;
   $("closeSheet").focus();
   const en = $("enableNotif"); if (en) en.onclick = enableNotifications;
+  const tn = $("testNotif"); if (tn) tn.onclick = testNotification;
   $("sheet").querySelectorAll("[data-open]").forEach(b => b.onclick = () => openSheet(b.dataset.open));
   if (items.length) markSeen();
 }
@@ -511,7 +528,8 @@ async function load() {
     updateBell(true);
     tellWorker();
     const want = location.hash.slice(1);
-    if (want && S.all.some(u => u.id === want)) openSheet(want);
+    if (want === "whats-new") openBell();
+    else if (want && S.all.some(u => u.id === want)) openSheet(want);
   } catch (e) {
     $("feed").innerHTML = `<div class="empty">Couldn't load updates. Check your connection and pull to refresh.</div>`;
     $("checked").textContent = "Offline";
