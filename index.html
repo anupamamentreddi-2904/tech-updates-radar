@@ -1,0 +1,434 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Tech Updates Radar</title>
+<meta name="description" content="Daily Claude, Power BI and Microsoft Fabric updates: what changed, how it works, how to get it and what it means for data teams.">
+<meta name="theme-color" content="#0b1220" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#f3f6f9" media="(prefers-color-scheme: light)">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+<link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Tech Radar">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,600;12..96,800&family=Figtree:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: sticky app bar -> radar hero (sweep + blips, stats) -> "needs action" rail -> filters -> date-grouped feed; details in a bottom sheet (side drawer on desktop). */
+:root {
+  --bg: #f3f6f9; --surface: #ffffff; --surface-2: #eaf0f5; --ink: #0d1726; --muted: #586779; --line: #dce4ec;
+  --accent: #0d8079; --accent-ink: #ffffff; --accent-soft: #dcf1ee;
+  --radar-bg: #0b1626; --radar-line: rgba(94, 234, 212, .22); --radar-sweep: rgba(45, 212, 191, .35);
+  --p-claude: #c9623a; --p-code: #7457e8; --p-pbi: #d79b00; --p-fabric: #12866d;
+  --high: #d33f49; --medium: #d97f06; --low: #7a8a9b;
+  --font-display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+  --font-body: "Figtree", "Segoe UI", system-ui, sans-serif;
+  --font-mono: "JetBrains Mono", ui-monospace, Consolas, monospace;
+  --r: 16px; --shadow: 0 1px 2px rgba(13, 23, 38, .06), 0 8px 24px rgba(13, 23, 38, .06);
+  color-scheme: light;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #0a1120; --surface: #111b2c; --surface-2: #17233a; --ink: #e5edf6; --muted: #93a3b6; --line: #22304a;
+    --accent: #2dd4bf; --accent-ink: #04201c; --accent-soft: #10302d;
+    --radar-bg: #060d19; --radar-line: rgba(94, 234, 212, .18);
+    --p-claude: #ef8a5f; --p-code: #a08cff; --p-pbi: #f5c33b; --p-fabric: #34c79f;
+    --high: #f26672; --medium: #f4a63a; --low: #8ea0b3;
+    --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .25);
+    color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #0a1120; --surface: #111b2c; --surface-2: #17233a; --ink: #e5edf6; --muted: #93a3b6; --line: #22304a;
+  --accent: #2dd4bf; --accent-ink: #04201c; --accent-soft: #10302d;
+  --radar-bg: #060d19; --radar-line: rgba(94, 234, 212, .18);
+  --p-claude: #ef8a5f; --p-code: #a08cff; --p-pbi: #f5c33b; --p-fabric: #34c79f;
+  --high: #f26672; --medium: #f4a63a; --low: #8ea0b3;
+  --shadow: 0 1px 2px rgba(0, 0, 0, .3), 0 10px 30px rgba(0, 0, 0, .25);
+  color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html { -webkit-text-size-adjust: 100%; }
+body { margin: 0; background: var(--bg); color: var(--ink); font: 16px/1.55 var(--font-body); min-height: 100vh; }
+button { font: inherit; color: inherit; cursor: pointer; }
+a { color: var(--accent); }
+:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+.wrap { max-width: 1080px; margin: 0 auto; padding-inline: 16px; }
+
+/* App bar */
+.bar { position: sticky; top: 0; z-index: 20; padding-top: env(safe-area-inset-top, 0px);
+  background: color-mix(in srgb, var(--bg) 82%, transparent); backdrop-filter: saturate(1.4) blur(14px); -webkit-backdrop-filter: saturate(1.4) blur(14px);
+  border-bottom: 1px solid color-mix(in srgb, var(--line) 70%, transparent); }
+.bar .wrap { display: flex; align-items: center; gap: 12px; padding-block: 10px; }
+.logo { width: 34px; height: 34px; flex: none; }
+.brand { flex: 1; min-width: 0; }
+.brand b { display: block; font: 800 18px/1.1 var(--font-display); letter-spacing: -.02em; }
+.brand span { display: block; font: 12px/1.3 var(--font-mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.pill-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
+.pill-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+
+/* Hero */
+.hero { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 28px; align-items: center; padding-block: 28px 8px; }
+@media (max-width: 760px) { .hero { grid-template-columns: 1fr; gap: 18px; padding-top: 18px; } }
+.radar { position: relative; width: 100%; max-width: 340px; aspect-ratio: 1; margin-inline: auto; border-radius: 50%; background: radial-gradient(circle at 50% 50%, #0f2237 0%, var(--radar-bg) 70%); box-shadow: inset 0 0 0 1px var(--radar-line), 0 18px 50px rgba(13, 128, 121, .18); overflow: hidden; }
+.radar svg { position: absolute; inset: 0; width: 100%; height: 100%; }
+.sweep { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0deg, transparent 300deg, var(--radar-sweep) 355deg, rgba(45, 212, 191, .7) 360deg); animation: spin 5.5s linear infinite; }
+@keyframes spin { to { transform: rotate(360deg); } }
+.blip { position: absolute; width: 12px; height: 12px; margin: -6px 0 0 -6px; border-radius: 50%; border: 0; padding: 0; background: var(--c); box-shadow: 0 0 0 3px color-mix(in srgb, var(--c) 30%, transparent), 0 0 14px var(--c); animation: blipIn .6s cubic-bezier(.2, .9, .3, 1.4) backwards; animation-delay: var(--d); }
+.blip.High::after { content: ""; position: absolute; inset: -6px; border-radius: 50%; border: 2px solid var(--c); animation: ping 2.4s ease-out infinite; animation-delay: var(--d); }
+.blip:hover, .blip:focus-visible { transform: scale(1.5); }
+@keyframes blipIn { from { transform: scale(0); opacity: 0; } }
+@keyframes ping { 0% { transform: scale(.6); opacity: .9; } 80%, 100% { transform: scale(2.4); opacity: 0; } }
+.radar-label { position: absolute; font: 600 10px/1 var(--font-mono); letter-spacing: .08em; text-transform: uppercase; color: rgba(204, 251, 241, .75); }
+.hero h1 { font: 800 clamp(30px, 6vw, 48px)/1.02 var(--font-display); letter-spacing: -.03em; margin: 0 0 10px; text-wrap: balance; }
+.hero h1 em { font-style: normal; color: var(--accent); }
+.hero p { margin: 0 0 18px; color: var(--muted); max-width: 52ch; }
+.stats { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px; margin-bottom: 16px; }
+.stat { background: var(--surface); border: 1px solid var(--line); border-radius: 14px; padding: 12px 14px; }
+.stat b { display: block; font: 800 28px/1 var(--font-display); font-variant-numeric: tabular-nums; }
+.stat span { font: 12px/1.3 var(--font-mono); color: var(--muted); text-transform: uppercase; letter-spacing: .05em; }
+.stat.high b { color: var(--high); }
+.legend { display: grid; gap: 8px; }
+.lg { display: grid; grid-template-columns: 110px minmax(0, 1fr) 28px; align-items: center; gap: 10px; font-size: 14px; }
+.lg i { display: block; height: 8px; border-radius: 99px; background: var(--surface-2); overflow: hidden; }
+.lg i::before { content: ""; display: block; height: 100%; width: var(--w); background: var(--c); border-radius: 99px; transition: width 1.1s cubic-bezier(.2, .8, .2, 1); }
+.lg b { font: 500 13px var(--font-mono); text-align: right; font-variant-numeric: tabular-nums; }
+.dot { display: inline-block; width: 9px; height: 9px; border-radius: 50%; background: var(--c); margin-right: 7px; vertical-align: 1px; }
+
+/* Sections */
+.section-h { display: flex; align-items: baseline; justify-content: space-between; gap: 12px; margin: 26px 0 10px; }
+.section-h h2 { font: 800 22px/1.2 var(--font-display); letter-spacing: -.02em; margin: 0; }
+.section-h span { font: 12px var(--font-mono); color: var(--muted); }
+.rail { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(260px, 300px); gap: 12px; overflow-x: auto; scroll-snap-type: x mandatory; padding: 4px 2px 14px; scrollbar-width: thin; }
+.hot { scroll-snap-align: start; position: relative; text-align: left; border: 0; border-radius: var(--r); padding: 1.5px; background: linear-gradient(120deg, var(--high), var(--c), var(--high)); background-size: 220% 220%; animation: shimmer 6s ease infinite; box-shadow: var(--shadow); }
+@keyframes shimmer { 50% { background-position: 100% 50%; } }
+.hot > div { background: var(--surface); border-radius: calc(var(--r) - 1.5px); padding: 14px; height: 100%; display: flex; flex-direction: column; gap: 8px; }
+.hot .t { font-weight: 700; line-height: 1.3; }
+.hot .a { font-size: 14px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+
+/* Filters */
+.filters { position: sticky; top: calc(55px + env(safe-area-inset-top, 0px)); z-index: 10; background: var(--bg); padding-block: 10px; display: grid; gap: 10px; }
+.search { position: relative; }
+.search input { width: 100%; padding: 11px 14px 11px 40px; border-radius: 12px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; }
+.search svg { position: absolute; left: 13px; top: 50%; transform: translateY(-50%); width: 17px; height: 17px; color: var(--muted); }
+.chips { display: flex; gap: 8px; overflow-x: auto; padding-bottom: 2px; scrollbar-width: none; }
+.chip { flex: none; border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 6px 13px; font-size: 14px; font-weight: 600; transition: background-color .2s, color .2s, border-color .2s, transform .15s; }
+.chip:active { transform: scale(.96); }
+.chip[aria-pressed="true"] { background: var(--ink); color: var(--bg); border-color: var(--ink); }
+
+/* Feed */
+.day { font: 600 12px/1 var(--font-mono); text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin: 22px 0 10px; display: flex; align-items: center; gap: 10px; }
+.day::after { content: ""; flex: 1; height: 1px; background: var(--line); }
+.grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 320px), 1fr)); gap: 12px; }
+.card { position: relative; text-align: left; border: 1px solid var(--line); background: var(--surface); border-radius: var(--r); padding: 14px 16px 14px 18px; display: flex; flex-direction: column; gap: 8px; box-shadow: var(--shadow); overflow: hidden; min-width: 0;
+  animation: rise .5s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: var(--d, 0s); transition: transform .2s ease, border-color .2s ease; }
+.card::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--c); }
+.card:hover { transform: translateY(-3px); border-color: color-mix(in srgb, var(--c) 55%, var(--line)); }
+@keyframes rise { from { transform: translateY(14px); opacity: .001; } }
+.card .t { font-weight: 700; font-size: 16.5px; line-height: 1.3; }
+.card .w { font-size: 14.5px; color: var(--muted); display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; }
+.meta { display: flex; flex-wrap: wrap; align-items: center; gap: 6px; font: 12px/1.2 var(--font-mono); color: var(--muted); }
+.tag { display: inline-flex; align-items: center; gap: 5px; padding: 3px 8px; border-radius: 999px; background: color-mix(in srgb, var(--c) 14%, transparent); color: var(--c); font-weight: 500; }
+.rel { padding: 3px 8px; border-radius: 999px; font-weight: 500; color: #fff; background: var(--rc); }
+.new { padding: 3px 8px; border-radius: 999px; background: var(--accent); color: var(--accent-ink); font-weight: 600; animation: glow 2s ease-in-out infinite; }
+@keyframes glow { 50% { box-shadow: 0 0 0 4px color-mix(in srgb, var(--accent) 25%, transparent); } }
+.empty { text-align: center; color: var(--muted); padding: 40px 16px; }
+
+/* Sheet */
+.scrim { position: fixed; inset: 0; z-index: 40; background: rgba(5, 10, 20, .5); opacity: 0; transition: opacity .3s; }
+.scrim.on { opacity: 1; }
+.sheet { position: fixed; z-index: 50; left: 0; right: 0; bottom: 0; max-height: 88vh; overflow-y: auto; background: var(--surface); border-radius: 22px 22px 0 0; box-shadow: 0 -10px 40px rgba(0, 0, 0, .25);
+  padding: 8px 20px calc(24px + env(safe-area-inset-bottom, 0px)); transform: translateY(105%); transition: transform .42s cubic-bezier(.2, .9, .25, 1.05); }
+.sheet.on { transform: none; }
+.grab { width: 44px; height: 5px; border-radius: 99px; background: var(--line); margin: 6px auto 14px; }
+@media (min-width: 900px) {
+  .sheet { left: auto; top: 0; width: 520px; max-height: none; border-radius: 22px 0 0 22px; transform: translateX(105%); padding-top: 24px; }
+  .grab { display: none; }
+}
+.sheet h3 { font: 800 25px/1.15 var(--font-display); letter-spacing: -.02em; margin: 10px 0 4px; text-wrap: balance; }
+.facts { display: grid; gap: 12px; margin: 18px 0; }
+.fact { display: grid; grid-template-columns: 34px minmax(0, 1fr); gap: 12px; padding: 12px; border-radius: 14px; background: var(--surface-2); animation: rise .45s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: var(--d); }
+.fact .ic { width: 34px; height: 34px; border-radius: 10px; display: grid; place-items: center; background: var(--surface); color: var(--c); font-size: 17px; }
+.fact h4 { margin: 0 0 2px; font: 600 12px/1.4 var(--font-mono); text-transform: uppercase; letter-spacing: .06em; color: var(--muted); }
+.fact p { margin: 0; overflow-wrap: anywhere; }
+.fact.action { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
+.fact.action p { font-weight: 600; }
+.actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.close { position: absolute; right: 14px; top: 12px; width: 36px; height: 36px; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); font-size: 18px; line-height: 1; }
+
+.toast { position: fixed; left: 50%; bottom: calc(24px + env(safe-area-inset-bottom, 0px)); z-index: 60; transform: translate(-50%, 140%); background: var(--ink); color: var(--bg); padding: 10px 16px; border-radius: 12px; font-weight: 600; transition: transform .35s cubic-bezier(.2, .9, .25, 1.1); max-width: calc(100% - 32px); }
+.toast.on { transform: translate(-50%, 0); }
+.ios-tip { display: grid; gap: 6px; }
+footer { color: var(--muted); font-size: 13px; padding-block: 36px calc(36px + env(safe-area-inset-bottom, 0px)); text-align: center; }
+.offline { background: var(--medium); color: #1b1200; text-align: center; font-size: 13px; font-weight: 600; padding: 6px; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+  .sweep { display: none; }
+}
+</style>
+</head>
+<body>
+<div class="offline" id="offline" hidden>You're offline - showing the last saved updates.</div>
+<header class="bar">
+  <div class="wrap">
+    <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#0b1626"/><circle cx="32" cy="32" r="21" fill="none" stroke="#2dd4bf" stroke-opacity=".35" stroke-width="2"/><circle cx="32" cy="32" r="12" fill="none" stroke="#2dd4bf" stroke-opacity=".5" stroke-width="2"/><path d="M32 32 L32 11 A21 21 0 0 1 50 22 Z" fill="#2dd4bf" fill-opacity=".55"/><circle cx="43" cy="20" r="4" fill="#f26672"/></svg>
+    <div class="brand"><b>Tech Updates Radar</b><span id="checked">Loading...</span></div>
+    <button class="pill-btn primary" id="installBtn" type="button" hidden>Install app</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <section class="hero" aria-label="Overview">
+    <div class="radar" id="radar" aria-label="Radar of recent updates">
+      <svg viewBox="0 0 100 100" aria-hidden="true">
+        <g fill="none" stroke="rgba(94,234,212,.2)" stroke-width=".35">
+          <circle cx="50" cy="50" r="16"/><circle cx="50" cy="50" r="30"/><circle cx="50" cy="50" r="44"/>
+          <line x1="50" y1="4" x2="50" y2="96"/><line x1="4" y1="50" x2="96" y2="50"/>
+        </g>
+      </svg>
+      <div class="sweep"></div>
+      <span class="radar-label" style="left:9%;top:9%">Claude</span>
+      <span class="radar-label" style="right:9%;top:9%">Code</span>
+      <span class="radar-label" style="right:9%;bottom:9%">Fabric</span>
+      <span class="radar-label" style="left:9%;bottom:9%">Power BI</span>
+    </div>
+    <div>
+      <h1>What changed in <em>Claude</em>, Power BI &amp; Fabric</h1>
+      <p>Every morning the radar scans release notes and blogs, then explains each update in plain words: what changed, how it works, how to get it and what it means for data teams.</p>
+      <div class="stats">
+        <div class="stat"><b data-count="total">0</b><span>Updates</span></div>
+        <div class="stat high"><b data-count="high">0</b><span>Need action</span></div>
+        <div class="stat"><b data-count="today">0</b><span>Latest batch</span></div>
+      </div>
+      <div class="legend" id="legend"></div>
+    </div>
+  </section>
+
+  <div class="section-h"><h2>Needs action</h2><span>High impact</span></div>
+  <div class="rail" id="rail" aria-label="High impact updates"></div>
+
+  <div class="section-h"><h2>All updates</h2><span id="shown"></span></div>
+  <div class="filters">
+    <label class="search">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg>
+      <input id="q" type="search" placeholder="Search updates, e.g. Direct Lake, dbt, Opus" aria-label="Search updates">
+    </label>
+    <div class="chips" id="productChips" role="group" aria-label="Filter by product"></div>
+    <div class="chips" id="relChips" role="group" aria-label="Filter by impact"></div>
+  </div>
+  <div id="feed" aria-live="polite"><div class="empty">Loading updates...</div></div>
+</main>
+
+<footer class="wrap">
+  Independent summaries generated daily with Claude. Not affiliated with Anthropic or Microsoft.<br>
+  Always confirm details with the source link before acting.
+</footer>
+
+<div class="scrim" id="scrim" hidden></div>
+<aside class="sheet" id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden></aside>
+<div class="toast" id="toast" role="status"></div>
+
+<script>
+const PRODUCTS = [
+  { key: "Claude", label: "Claude", c: "var(--p-claude)", angle: 225 },
+  { key: "Claude Code", label: "Claude Code", c: "var(--p-code)", angle: 315 },
+  { key: "Power BI", label: "Power BI", c: "var(--p-pbi)", angle: 135 },
+  { key: "Fabric", label: "Fabric", c: "var(--p-fabric)", angle: 45 }
+];
+const PC = Object.fromEntries(PRODUCTS.map(p => [p.key, p.c]));
+const REL = { High: "var(--high)", Medium: "var(--medium)", Low: "var(--low)" };
+const RANK = { High: 0, Medium: 1, Low: 2 };
+const S = { all: [], product: "", rel: "", q: "", lastSeen: "", latest: "" };
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, ch => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[ch]));
+const reduced = matchMedia("(prefers-reduced-motion: reduce)").matches;
+const store = { get(k) { try { return localStorage.getItem(k); } catch { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch { /* ignore */ } } };
+
+function dayLabel(sort) {
+  if (!sort) return "Earlier";
+  const d = new Date(+sort.slice(0, 4), +sort.slice(4, 6) - 1, +sort.slice(6, 8));
+  const t = new Date(); t.setHours(0, 0, 0, 0);
+  const diff = Math.round((t - d) / 864e5);
+  const dd = `${sort.slice(6, 8)}-${sort.slice(4, 6)}-${sort.slice(0, 4)}`;
+  return diff === 0 ? `Today · ${dd}` : diff === 1 ? `Yesterday · ${dd}` : dd;
+}
+
+function countUp(el, to) {
+  if (reduced) { el.textContent = to; return; }
+  const start = performance.now(), dur = 900;
+  const step = (now) => { const k = Math.min(1, (now - start) / dur); el.textContent = Math.round(to * (1 - Math.pow(1 - k, 3))); if (k < 1) requestAnimationFrame(step); };
+  requestAnimationFrame(step);
+}
+
+function renderHero() {
+  const all = S.all, high = all.filter(u => u.relevance === "High").length;
+  const latestBatch = all.filter(u => u.sent_sort === S.latest).length;
+  countUp(document.querySelector('[data-count="total"]'), all.length);
+  countUp(document.querySelector('[data-count="high"]'), high);
+  countUp(document.querySelector('[data-count="today"]'), latestBatch);
+  const max = Math.max(1, ...PRODUCTS.map(p => all.filter(u => u.product === p.key).length));
+  $("legend").innerHTML = PRODUCTS.map(p => {
+    const n = all.filter(u => u.product === p.key).length;
+    return `<div class="lg" style="--c:${p.c}"><span><span class="dot"></span>${p.label}</span><i style="--w:0%"></i><b>${n}</b></div>`;
+  }).join("");
+  requestAnimationFrame(() => requestAnimationFrame(() => {
+    $("legend").querySelectorAll(".lg").forEach((row, i) => {
+      const n = all.filter(u => u.product === PRODUCTS[i].key).length;
+      row.querySelector("i").style.setProperty("--w", (n / max * 100) + "%");
+    });
+  }));
+  // Radar blips: product = quadrant, impact = distance (High nearest the centre), spread by a stable hash.
+  const radar = $("radar");
+  radar.querySelectorAll(".blip").forEach(b => b.remove());
+  all.slice(0, 48).forEach((u, i) => {
+    const p = PRODUCTS.find(x => x.key === u.product) || PRODUCTS[0];
+    let h = 0; for (const ch of u.id) h = (h * 31 + ch.charCodeAt(0)) >>> 0;
+    const ang = (p.angle - 38 + (h % 76)) * Math.PI / 180;
+    const base = { High: 14, Medium: 26, Low: 36 }[u.relevance] ?? 30;
+    const r = base + ((h >> 8) % 9);
+    const b = document.createElement("button");
+    b.className = "blip " + (u.relevance || "");
+    b.type = "button";
+    b.title = u.title;
+    b.setAttribute("aria-label", `${u.product}: ${u.title}`);
+    b.style.cssText = `left:${50 + r * Math.cos(ang)}%;top:${50 + r * Math.sin(ang)}%;--c:${p.c};--d:${(0.3 + i * 0.04).toFixed(2)}s`;
+    b.addEventListener("click", () => openSheet(u.id));
+    radar.appendChild(b);
+  });
+}
+
+function tags(u) {
+  const isNew = S.lastSeen && (u.sent_sort || "") > S.lastSeen;
+  return `<div class="meta"><span class="tag" style="--c:${PC[u.product] || "var(--accent)"}">${esc(u.product)}</span>
+    <span class="rel" style="--rc:${REL[u.relevance] || "var(--low)"}">${esc(u.relevance)}</span>
+    <span>${esc(u.status)}</span><span>${esc(u.published)}</span>${isNew ? '<span class="new">NEW</span>' : ""}</div>`;
+}
+
+function renderRail() {
+  const hot = S.all.filter(u => u.relevance === "High").slice(0, 12);
+  $("rail").innerHTML = hot.length ? hot.map(u => `
+    <button class="hot" type="button" data-id="${esc(u.id)}" style="--c:${PC[u.product] || "var(--accent)"}"><div>
+      ${tags(u)}<div class="t">${esc(u.title)}</div><div class="a">${esc(u.action)}</div>
+    </div></button>`).join("") : `<div class="empty">Nothing urgent right now.</div>`;
+}
+
+function renderChips() {
+  $("productChips").innerHTML = [{ key: "", label: "All products" }, ...PRODUCTS].map(p =>
+    `<button class="chip" type="button" data-p="${esc(p.key)}" aria-pressed="${S.product === p.key}">${p.key ? `<span class="dot" style="--c:${p.c}"></span>` : ""}${p.label}</button>`).join("");
+  $("relChips").innerHTML = ["", "High", "Medium", "Low"].map(r =>
+    `<button class="chip" type="button" data-r="${r}" aria-pressed="${S.rel === r}">${r ? r + " impact" : "Any impact"}</button>`).join("");
+}
+
+function renderFeed() {
+  const q = S.q.toLowerCase();
+  const items = S.all.filter(u => (!S.product || u.product === S.product) && (!S.rel || u.relevance === S.rel) &&
+    (!q || [u.title, u.what_changed, u.how_it_works, u.impact, u.product].join(" ").toLowerCase().includes(q)));
+  $("shown").textContent = `${items.length} shown`;
+  if (!items.length) { $("feed").innerHTML = `<div class="empty">No updates match. Try another filter or search.</div>`; return; }
+  let html = "", day = null, n = 0;
+  for (const u of items) {
+    if (u.sent_sort !== day) { if (day !== null) html += `</div>`; day = u.sent_sort; html += `<div class="day">${dayLabel(day)}</div><div class="grid">`; }
+    html += `<button class="card" type="button" data-id="${esc(u.id)}" style="--c:${PC[u.product] || "var(--accent)"};--d:${Math.min(n++ * 0.035, 0.6).toFixed(3)}s">
+      ${tags(u)}<div class="t">${esc(u.title)}</div><div class="w">${esc(u.what_changed)}</div></button>`;
+  }
+  $("feed").innerHTML = html + `</div>`;
+}
+
+const FACTS = [
+  ["what_changed", "What changed", "✦"], ["how_it_works", "How it works", "⚙"], ["how_to_get", "How to get it", "⇣"],
+  ["impact", "What it means for data teams", "◎"], ["action", "Suggested next step", "→"]
+];
+let lastFocus = null;
+function openSheet(id) {
+  const u = S.all.find(x => x.id === id); if (!u) return;
+  lastFocus = document.activeElement;
+  const c = PC[u.product] || "var(--accent)";
+  $("sheet").innerHTML = `<div class="grab"></div><button class="close" type="button" id="closeSheet" aria-label="Close">✕</button>
+    ${tags(u)}<h3 id="sheetTitle">${esc(u.title)}</h3>
+    <div class="facts">${FACTS.map(([k, label, ic], i) => u[k] ? `<div class="fact ${k === "action" ? "action" : ""}" style="--c:${c};--d:${(0.08 + i * 0.06).toFixed(2)}s">
+      <div class="ic" aria-hidden="true">${ic}</div><div><h4>${label}</h4><p>${esc(u[k])}</p></div></div>` : "").join("")}</div>
+    <div class="actions">
+      ${/^https?:\/\//.test(u.source_url || "") ? `<a class="pill-btn primary" href="${esc(u.source_url)}" target="_blank" rel="noopener">Open source ↗</a>` : ""}
+      <button class="pill-btn" type="button" id="shareBtn">Share</button>
+    </div>`;
+  const scrim = $("scrim"), sheet = $("sheet");
+  scrim.hidden = false; sheet.hidden = false;
+  requestAnimationFrame(() => { scrim.classList.add("on"); sheet.classList.add("on"); });
+  sheet.scrollTop = 0;
+  $("closeSheet").focus();
+  try { history.replaceState(null, "", "#" + id); } catch { /* ignore */ }
+  $("closeSheet").onclick = closeSheet;
+  $("shareBtn").onclick = async () => {
+    const url = location.href.split("#")[0] + "#" + id;
+    try { if (navigator.share) { await navigator.share({ title: u.title, text: u.what_changed, url }); return; } } catch { return; }
+    try { await navigator.clipboard.writeText(url); toast("Link copied"); } catch { toast(url); }
+  };
+}
+function closeSheet() {
+  const scrim = $("scrim"), sheet = $("sheet");
+  scrim.classList.remove("on"); sheet.classList.remove("on");
+  setTimeout(() => { scrim.hidden = true; sheet.hidden = true; }, reduced ? 0 : 420);
+  try { history.replaceState(null, "", location.pathname + location.search); } catch { /* ignore */ }
+  lastFocus?.focus?.();
+}
+let toastTimer;
+function toast(msg) { const t = $("toast"); t.textContent = msg; t.classList.add("on"); clearTimeout(toastTimer); toastTimer = setTimeout(() => t.classList.remove("on"), 2600); }
+
+/* Events */
+document.addEventListener("click", e => {
+  const card = e.target.closest(".card, .hot"); if (card) { openSheet(card.dataset.id); return; }
+  const p = e.target.closest("[data-p]"); if (p) { S.product = p.dataset.p; renderChips(); renderFeed(); return; }
+  const r = e.target.closest("[data-r]"); if (r) { S.rel = r.dataset.r; renderChips(); renderFeed(); }
+});
+$("scrim").addEventListener("click", closeSheet);
+document.addEventListener("keydown", e => { if (e.key === "Escape" && !$("sheet").hidden) closeSheet(); });
+let qTimer; $("q").addEventListener("input", e => { clearTimeout(qTimer); qTimer = setTimeout(() => { S.q = e.target.value.trim(); renderFeed(); }, 120); });
+addEventListener("offline", () => { $("offline").hidden = false; });
+addEventListener("online", () => { $("offline").hidden = true; });
+
+/* Install */
+let deferredInstall = null;
+const isStandalone = matchMedia("(display-mode: standalone)").matches || navigator.standalone;
+addEventListener("beforeinstallprompt", e => { e.preventDefault(); deferredInstall = e; if (!isStandalone) $("installBtn").hidden = false; });
+if (!isStandalone && /iphone|ipad|ipod/i.test(navigator.userAgent)) $("installBtn").hidden = false;
+$("installBtn").addEventListener("click", async () => {
+  if (deferredInstall) { deferredInstall.prompt(); await deferredInstall.userChoice; deferredInstall = null; $("installBtn").hidden = true; return; }
+  $("sheet").innerHTML = `<div class="grab"></div><button class="close" type="button" id="closeSheet" aria-label="Close">✕</button>
+    <h3 id="sheetTitle">Install on iPhone</h3><div class="facts ios-tip">
+    <div class="fact" style="--c:var(--accent);--d:.05s"><div class="ic">1</div><div><h4>Step 1</h4><p>Tap the <b>Share</b> button in Safari (square with an arrow).</p></div></div>
+    <div class="fact" style="--c:var(--accent);--d:.1s"><div class="ic">2</div><div><h4>Step 2</h4><p>Choose <b>Add to Home Screen</b>, then <b>Add</b>.</p></div></div>
+    <div class="fact" style="--c:var(--accent);--d:.15s"><div class="ic">3</div><div><h4>Done</h4><p>Open <b>Tech Radar</b> from your home screen like any app.</p></div></div></div>`;
+  $("scrim").hidden = false; $("sheet").hidden = false;
+  requestAnimationFrame(() => { $("scrim").classList.add("on"); $("sheet").classList.add("on"); });
+  $("closeSheet").onclick = closeSheet;
+});
+
+/* Data */
+async function load() {
+  try {
+    const r = await fetch("data/updates.json?ts=" + Date.now(), { cache: "no-store" });
+    if (!r.ok) throw new Error(r.status);
+    const data = await r.json();
+    S.all = (data.updates || []).filter(u => u && u.id)
+      .sort((a, b) => (b.sent_sort || "").localeCompare(a.sent_sort || "") || (RANK[a.relevance] ?? 3) - (RANK[b.relevance] ?? 3));
+    S.latest = S.all[0]?.sent_sort || "";
+    S.lastSeen = store.get("radar-last-seen") || "";
+    $("checked").textContent = data.last_check_ist ? `Last scan ${data.last_check_ist} IST` : "Daily scan 09:00 IST";
+    renderHero(); renderRail(); renderChips(); renderFeed();
+    store.set("radar-last-seen", S.latest);
+    const want = location.hash.slice(1);
+    if (want && S.all.some(u => u.id === want)) openSheet(want);
+  } catch (e) {
+    $("feed").innerHTML = `<div class="empty">Couldn't load updates. Check your connection and pull to refresh.</div>`;
+    $("checked").textContent = "Offline";
+  }
+}
+load();
+if ("serviceWorker" in navigator) addEventListener("load", () => navigator.serviceWorker.register("sw.js").catch(() => {}));
+</script>
+</body>
+</html>
