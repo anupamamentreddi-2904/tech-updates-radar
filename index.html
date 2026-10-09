@@ -72,7 +72,8 @@ a { color: var(--accent); }
 
 /* Hero */
 .hero { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 28px; align-items: center; padding-block: 28px 8px; }
-@media (max-width: 760px) { .hero { grid-template-columns: 1fr; gap: 18px; padding-top: 18px; } }
+@media (max-width: 760px) { .hero { grid-template-columns: minmax(0, 1fr); gap: 18px; padding-top: 18px; } }
+main, .hero > div { min-width: 0; }
 .radar { position: relative; width: 100%; max-width: 340px; aspect-ratio: 1; margin-inline: auto; border-radius: 50%; background: radial-gradient(circle at 50% 50%, #0f2237 0%, var(--radar-bg) 70%); box-shadow: inset 0 0 0 1px var(--radar-line), 0 18px 50px rgba(13, 128, 121, .18); overflow: hidden; }
 .radar svg { position: absolute; inset: 0; width: 100%; height: 100%; }
 .sweep { position: absolute; inset: 0; border-radius: 50%; background: conic-gradient(from 0deg, transparent 0deg, transparent 300deg, var(--radar-sweep) 355deg, rgba(45, 212, 191, .7) 360deg); animation: spin 5.5s linear infinite; }
@@ -191,10 +192,10 @@ footer { color: var(--muted); font-size: 13px; padding-block: 36px calc(36px + e
         </g>
       </svg>
       <div class="sweep"></div>
-      <span class="radar-label" style="left:9%;top:9%">Claude</span>
-      <span class="radar-label" style="right:9%;top:9%">Code</span>
-      <span class="radar-label" style="right:9%;bottom:9%">Fabric</span>
-      <span class="radar-label" style="left:9%;bottom:9%">Power BI</span>
+      <span class="radar-label" style="left:20%;top:21%">Claude</span>
+      <span class="radar-label" style="right:20%;top:21%">Code</span>
+      <span class="radar-label" style="right:20%;bottom:21%">Fabric</span>
+      <span class="radar-label" style="left:18%;bottom:21%">Power BI</span>
     </div>
     <div>
       <h1>What changed in <em>Claude</em>, Power BI &amp; Fabric</h1>
@@ -414,6 +415,10 @@ async function load() {
     if (!r.ok) throw new Error(r.status);
     const data = await r.json();
     S.all = (data.updates || []).filter(u => u && u.id)
+      .map(u => {
+        const m = /^(\d{2})-(\d{2})-(\d{4})$/.exec(u.sent_date || "");
+        return { ...u, sent_sort: u.sent_sort || (m ? m[3] + m[2] + m[1] : "") };
+      })
       .sort((a, b) => (b.sent_sort || "").localeCompare(a.sent_sort || "") || (RANK[a.relevance] ?? 3) - (RANK[b.relevance] ?? 3));
     S.latest = S.all[0]?.sent_sort || "";
     S.lastSeen = store.get("radar-last-seen") || "";

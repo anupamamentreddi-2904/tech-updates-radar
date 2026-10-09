@@ -1,5 +1,5 @@
 // Offline support: app shell cache-first, update feed network-first (falls back to the last saved copy).
-const VERSION = "radar-v1";
+const VERSION = "radar-v2";
 const SHELL = ["./", "index.html", "manifest.webmanifest", "icons/icon.svg", "icons/icon-192.png", "icons/apple-touch-icon.png"];
 
 self.addEventListener("install", (e) => {
