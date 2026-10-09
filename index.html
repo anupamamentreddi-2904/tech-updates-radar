@@ -69,6 +69,17 @@ a { color: var(--accent); }
 .brand span { display: block; font: 12px/1.3 var(--font-mono); color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .pill-btn { border: 1px solid var(--line); background: var(--surface); border-radius: 999px; padding: 7px 14px; font-weight: 600; font-size: 14px; display: inline-flex; align-items: center; gap: 6px; }
 .pill-btn.primary { background: var(--accent); border-color: var(--accent); color: var(--accent-ink); }
+.bell { position: relative; width: 40px; height: 40px; flex: none; border-radius: 50%; border: 1px solid var(--line); background: var(--surface); display: grid; place-items: center; }
+.bell svg { width: 20px; height: 20px; }
+.bell.ring svg { animation: ring 1.2s ease-in-out 2; transform-origin: 50% 10%; }
+@keyframes ring { 10%, 30% { transform: rotate(14deg); } 20%, 40% { transform: rotate(-14deg); } 50% { transform: none; } }
+.bell-count { position: absolute; top: -4px; right: -4px; min-width: 20px; height: 20px; padding: 0 5px; border-radius: 99px; background: var(--high); color: #fff; font: 700 11px/20px var(--font-body); text-align: center; box-shadow: 0 0 0 2px var(--bg); animation: blipIn .5s cubic-bezier(.2, .9, .3, 1.4); }
+.notif-row { display: grid; grid-template-columns: 10px minmax(0, 1fr); gap: 12px; align-items: start; width: 100%; text-align: left; border: 0; background: var(--surface-2); border-radius: 14px; padding: 12px; animation: rise .4s cubic-bezier(.2, .8, .2, 1) backwards; animation-delay: var(--d); }
+.notif-row .dot { margin: 6px 0 0; }
+.notif-row b { display: block; line-height: 1.3; }
+.notif-row small { color: var(--muted); font: 12px var(--font-mono); }
+.notif-list { display: grid; gap: 8px; margin: 14px 0 18px; }
+.notif-setting { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 12px; border: 1px dashed var(--line); border-radius: 14px; font-size: 14px; color: var(--muted); }
 
 /* Hero */
 .hero { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 28px; align-items: center; padding-block: 28px 8px; }
@@ -178,6 +189,10 @@ footer { color: var(--muted); font-size: 13px; padding-block: 36px calc(36px + e
   <div class="wrap">
     <svg class="logo" viewBox="0 0 64 64" aria-hidden="true"><rect width="64" height="64" rx="16" fill="#0b1626"/><circle cx="32" cy="32" r="21" fill="none" stroke="#2dd4bf" stroke-opacity=".35" stroke-width="2"/><circle cx="32" cy="32" r="12" fill="none" stroke="#2dd4bf" stroke-opacity=".5" stroke-width="2"/><path d="M32 32 L32 11 A21 21 0 0 1 50 22 Z" fill="#2dd4bf" fill-opacity=".55"/><circle cx="43" cy="20" r="4" fill="#f26672"/></svg>
     <div class="brand"><b>Tech Updates Radar</b><span id="checked">Loading...</span></div>
+    <button class="bell" id="bellBtn" type="button" aria-label="What's new">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/><path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/></svg>
+      <span class="bell-count" id="bellCount" hidden>0</span>
+    </button>
     <button class="pill-btn primary" id="installBtn" type="button" hidden>Install app</button>
   </div>
 </header>
@@ -408,6 +423,74 @@ $("installBtn").addEventListener("click", async () => {
   $("closeSheet").onclick = closeSheet;
 });
 
+/* Notifications: bell + app icon badge in the app; background check on Android (Periodic Background Sync). */
+const unread = () => S.all.filter(u => (u.sent_sort || "") > S.lastSeen);
+function updateBell(announce) {
+  const n = unread().length;
+  $("bellCount").hidden = n === 0;
+  $("bellCount").textContent = n > 99 ? "99+" : n;
+  $("bellBtn").setAttribute("aria-label", n ? `${n} new updates` : "What's new");
+  try { n ? navigator.setAppBadge?.(n) : navigator.clearAppBadge?.(); } catch { /* unsupported */ }
+  if (announce && n) {
+    if (!reduced) { $("bellBtn").classList.add("ring"); setTimeout(() => $("bellBtn").classList.remove("ring"), 2600); }
+    toast(`🔔 ${n} new update${n > 1 ? "s" : ""} since your last visit`);
+  }
+}
+function markSeen() {
+  S.lastSeen = S.latest; store.set("radar-last-seen", S.latest);
+  updateBell(false); renderFeed(); renderRail();
+}
+async function tellWorker() {
+  // Lets the background check know what this device has already seen, so it never notifies twice.
+  try { const c = await caches.open("radar-meta"); await c.put("/__meta/latest", new Response(S.latest)); } catch { /* ignore */ }
+}
+function notifState() {
+  if (!("Notification" in window)) return "unsupported";
+  return Notification.permission;
+}
+async function enableNotifications() {
+  if (!("Notification" in window)) { toast("This browser can't show notifications. Install the app first."); return; }
+  const perm = await Notification.requestPermission();
+  if (perm !== "granted") { toast("Notifications are off. You can turn them on in your phone settings."); openBell(); return; }
+  try {
+    const reg = await navigator.serviceWorker.ready;
+    if ("periodicSync" in reg) {
+      await reg.periodicSync.register("check-updates", { minInterval: 12 * 60 * 60 * 1000 });
+      toast("Done! You'll get a notification when new updates arrive.");
+    } else {
+      toast("Notifications on. This phone only checks when you open the app.");
+    }
+  } catch { toast("Notifications on. Install the app to get them in the background."); }
+  openBell();
+}
+function openBell() {
+  const items = unread();
+  const st = notifState();
+  lastFocus = document.activeElement;
+  $("sheet").innerHTML = `<div class="grab"></div><button class="close" type="button" id="closeSheet" aria-label="Close">✕</button>
+    <h3 id="sheetTitle">${items.length ? `${items.length} new update${items.length > 1 ? "s" : ""}` : "You're all caught up"}</h3>
+    <div class="meta">${items.length ? "Since your last visit" : `Last scan: ${esc($("checked").textContent.replace("Last scan ", ""))}`}</div>
+    <div class="notif-list">${items.slice(0, 30).map((u, i) => `
+      <button class="notif-row" type="button" data-open="${esc(u.id)}" style="--d:${(i * 0.04).toFixed(2)}s">
+        <span class="dot" style="--c:${PC[u.product] || "var(--accent)"}"></span>
+        <span><b>${esc(u.title)}</b><small>${esc(u.product)} · ${esc(u.relevance)} impact · ${esc(u.status)}</small></span>
+      </button>`).join("") || `<div class="empty">New updates appear here after the daily 09:00 IST scan.</div>`}</div>
+    <div class="notif-setting">${
+      st === "granted" ? "<span>🔔 Phone notifications are on for this device.</span>"
+      : st === "denied" ? "<span>Notifications are blocked. Turn them on in your phone's settings for this app.</span>"
+      : st === "unsupported" ? "<span>Install the app to get notifications on this phone.</span>"
+      : `<span>Get a phone notification when new updates arrive.</span><button class="pill-btn primary" type="button" id="enableNotif">Turn on notifications</button>`}</div>`;
+  $("scrim").hidden = false; $("sheet").hidden = false;
+  requestAnimationFrame(() => requestAnimationFrame(() => { $("scrim").classList.add("on"); $("sheet").classList.add("on"); }));
+  $("closeSheet").onclick = closeSheet;
+  $("closeSheet").focus();
+  const en = $("enableNotif"); if (en) en.onclick = enableNotifications;
+  $("sheet").querySelectorAll("[data-open]").forEach(b => b.onclick = () => openSheet(b.dataset.open));
+  if (items.length) markSeen();
+}
+$("bellBtn").addEventListener("click", openBell);
+navigator.serviceWorker?.addEventListener?.("message", e => { if (e.data === "open-bell") openBell(); });
+
 /* Data */
 async function load() {
   try {
@@ -421,10 +504,12 @@ async function load() {
       })
       .sort((a, b) => (b.sent_sort || "").localeCompare(a.sent_sort || "") || (RANK[a.relevance] ?? 3) - (RANK[b.relevance] ?? 3));
     S.latest = S.all[0]?.sent_sort || "";
-    S.lastSeen = store.get("radar-last-seen") || "";
+    // First visit: treat only the latest batch as new.
+    S.lastSeen = store.get("radar-last-seen") || (S.all.find(u => u.sent_sort < S.latest)?.sent_sort || "0");
     $("checked").textContent = data.last_check_ist ? `Last scan ${data.last_check_ist} IST` : "Daily scan 09:00 IST";
     renderHero(); renderRail(); renderChips(); renderFeed();
-    store.set("radar-last-seen", S.latest);
+    updateBell(true);
+    tellWorker();
     const want = location.hash.slice(1);
     if (want && S.all.some(u => u.id === want)) openSheet(want);
   } catch (e) {
