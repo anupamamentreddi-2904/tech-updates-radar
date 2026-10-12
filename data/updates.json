@@ -1,7 +1,7 @@
 {
-  "generated_at": "2026-10-09T12:06:58.4169745Z",
-  "last_check_ist": "09-10-2026 17:36",
-  "count": 44,
+  "generated_at": "2026-10-12T03:31:17.2740845Z",
+  "last_check_ist": "12-10-2026 09:01",
+  "count": 46,
   "updates": [
     {
       "id": "826898e2e060",
@@ -662,6 +662,36 @@
       "how_to_get": "On by default.",
       "impact": "Faster BI queries with no work needed.",
       "action": ""
+    },
+    {
+      "id": "cf98f171740f",
+      "product": "Claude",
+      "published": "09-10-2026",
+      "status": "Beta",
+      "relevance": "Medium",
+      "source_url": "https://platform.claude.com/docs/en/release-notes/overview",
+      "sent_date": "12-10-2026",
+      "title": "Dynamic workflows for Claude Managed Agents",
+      "what_changed": "A Managed Agents agent can now write a workflow: a program that runs many agents in phases and combines their results. It suits large jobs, such as reviewing hundreds of documents.",
+      "how_it_works": "The server runs each workflow in the background as a workflow run. Progress appears as workflow_run.* events on the session event stream. The system prompt guides when the agent starts a run.",
+      "how_to_get": "Send the beta header managed-agents-2026-04-01. Set the agent's multiagent field to {\"type\":\"multiagent_20261001\",\"workflows\":{\"type\":\"enabled\"}}.",
+      "impact": "Affects teams building AI-driven agents on the Claude API. It could automate bulk jobs, such as documenting or reviewing many pipelines, models or reports.",
+      "action": "Trial it on one bulk review task, such as dbt model documentation checks, in a sandbox agent. Compare cost and output quality against single-agent runs."
+    },
+    {
+      "id": "6e22764a02b6",
+      "product": "Claude Code",
+      "published": "09-10-2026",
+      "status": "GA",
+      "relevance": "Low",
+      "source_url": "https://github.com/anthropics/claude-code/releases",
+      "sent_date": "12-10-2026",
+      "title": "Claude Code v2.1.296: subagent compaction, workflow model override, larger MCP limits",
+      "what_changed": "Adds autoCompactWindow for subagents, CLAUDE_CODE_WORKFLOW_SUBAGENT_MODEL, an overloaded-retry max delay setting, and an allow_large option for the Read tool. The MCP description limit rises from 2,048 to 4,096 characters. Fixes cover non-UTF-8 file edits, hook denials, Bash permission checks, and PowerShell and MCP stdin handling on Windows.",
+      "how_it_works": "Settings and environment variables control the new behaviour. The Edit and NotebookEdit fix stops them corrupting non-UTF-8 files. PowerShell commands up to 32 KB now get allow rules and read-only detection.",
+      "how_to_get": "Update Claude Code to v2.1.296, for example by running claude update.",
+      "impact": "Affects everyone using Claude Code. The Windows PowerShell permission fixes help Windows users most. The workflow model variable can cut cost in multi-agent runs.",
+      "action": "Roll the update out to your team. Set CLAUDE_CODE_WORKFLOW_SUBAGENT_MODEL if you run workflows."
     }
   ]
 }
